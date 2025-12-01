@@ -6,7 +6,7 @@
   background-color: $primary;
 
   &__container {
-    @include mixins.container(45px,45px);
+    @include mixins.container(45px, 0rem, 45px);
     @include mixins.flex(row);
     align-items: center;
     justify-content: space-between;
@@ -24,7 +24,6 @@
   }
 
   &__basket {
-    //@include mixins.icon($headerElementsSize, 'basket-2');
     @include mixins.link($primary, $hover);
     background-image: url(../images/shopping_cart.svg);
     height: 58px;

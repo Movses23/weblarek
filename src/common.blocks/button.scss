@@ -4,10 +4,11 @@
 .button {
   @include mixins.button($primary, white, $hover);
   border: 0;
-
+  font-size: $mainFontSize;
   &_alt {
     @include mixins.button(white, $primaryLight, $primaryLight);
     border: $defaultBorder;
+    min-width: 16rem;
     &:hover {
       border: $hoverBorder;
     }
@@ -16,5 +17,6 @@
   &_alt-active {
     @include mixins.button(white, $primaryLight, $primaryLight);
     border: $hoverBorder;
+    min-width: 16rem;
   }
 }

@@ -258,3 +258,406 @@ fetchProducts(): Promise<IProduct[]>
 sendOrder(order: IOrderRequest): Promise<Record<string, unknown>>
 делает POST на /order/ и передаёт тело заказа (buyer + items: string[]).
 возвращает ответ сервера (тип можно заменить на конкретный интерфейс ответа).
+
+### Слой представления View
+
+Схема классов:
+
+HeaderView — шапка (логотип, кнопка корзины и счётчик)
+GalleryView — контейнер галереи, рендерит список карточек
+CardBaseView — родитель для карточек
+CardCatalogView — карточка в каталоге (template #card-catalog)
+CardPreviewView — карточка предпросмотра / full (template #card-preview)
+CardBasketView — компактная карточка в корзине (template #card-basket)
+ModalView — модальное окно (не наследуется)
+BasketView — содержимое модального окна корзины (template #basket) — компонент, который может рендериться в ModalView
+FormBaseView — общий родитель форм
+OrderFormView — форма выбора способа оплаты и адреса (template #order)
+ContactsFormView — форма ввода email/phone (template #contacts)
+SuccessView — шаблон успешного оформления (template #success)
+
+#### Класс HeaderView
+
+Назначение: отображение шапки сайта, логотипа и кнопки корзины со счётчиком.
+Конструктор:
+
+constructor(container: HTMLElement, events: EventEmitter)
+
+Поля:
+container: HTMLElement (наследуется от Component)
+btnBasket: HTMLButtonElement
+counterEl: HTMLElement
+events: EventEmitter
+
+Методы:
+render(): HTMLElement — привязывает btnBasket и counterEl.
+setCount(count: number): void — обновляет счётчик в шапке.
+
+#### Класс GalleryView
+
+Назначение: контейнер галереи товаров; отвечает за рендер списка карточек (вставляет экземпляры CardCatalogView) и делегирует события карточек дальше.
+
+Конструктор: constructor(container: HTMLElement, events: EventEmitter)
+
+Поля:
+container: HTMLElement (элемент .gallery)
+events: EventEmitter
+list: HTMLElement
+
+Методы:
+render(products: IProduct[]): HTMLElement — очищает контейнер, создаёт и рендерит карточки для каждого товара (использует CardCatalogView).
+appendCard(card: CardCatalogView): void
+
+#### Класс CardBaseView (родитель трёх карточек)
+
+Назначение: общий функционал для всех трех видов карточек: работа с шаблоном (cloneNode), базовый парсинг селекторов, установка изображения, заголовка, цены, категории, и общая логика привязки событий (клик по карточке, кнопки).
+
+Конструктор: constructor(container: HTMLElement, templateId: string, events: EventEmitter)
+
+Поля:
+container: HTMLElement
+templateId: string
+root: HTMLElement — корневый элемент клонированного шаблона
+product: IProduct | null
+events: EventEmitter
+
+Методы:
+render(data: Partial<IProduct> & { product?: IProduct }): HTMLElement — клонирует шаблон, заполняет поля (в дочерних классах частично переопределяется или вызывает protected методы).
+protected setImage(imgEl: HTMLImageElement, src: string, alt?: string): void (использует Component.setImage)
+protected bindCommonHandlers(): void — назначает общие обработчики.
+getRoot(): HTMLElement
+
+#### Класс CardCatalogView (extends CardBaseView)
+
+Шаблон: #card-catalog
+
+Кликабельная кнопка (весь элемент <button class="gallery__item card">) — эмитит 'card:open' с полным продуктом.
+
+render(product: IProduct): HTMLElement — заполняет category, title, image, price.
+
+#### Класс CardPreviewView (extends CardBaseView)
+
+Шаблон: #card-preview
+
+Назначение: полная карточка товара (в модальном окне или в отдельной области).
+
+Поведение:
+Кнопка 'В корзину' => эмитит 'card:add'.
+render(product: IProduct): HTMLElement — отображает описание, цену и т.п.
+
+#### Класс CardBasketView (extends CardBaseView)
+
+Шаблон: #card-basket
+
+Назначение: компактный элемент списка корзины (li).
+
+Поведение:
+Кнопка удаления => эмитит 'card:remove' с payload { productId }.
+render(product: IProduct, index?: number): HTMLElement
+
+#### Класс ModalView
+
+Конструктор:
+constructor(container: HTMLElement, events: EventEmitter)
+container — root модального контейнера
+
+Поля:
+container: HTMLElement (контейнер .modal)
+contentContainer: HTMLElement (элемент .modal__content)
+closeBtn: HTMLButtonElement
+events: EventEmitter
+
+Методы:
+open(): void — открывает модал (добавляет класс открыт/стили), эмитит 'modal:open' (payload: { } или { source }).
+close(): void — закрывает модал, очищает содержимое, эмитит 'modal:close'.
+setContent(node: HTMLElement | Component): void — вставляет переданный элемент в .modal__content.
+clearContent(): void
+onBackdropClick/keyboard handlers — при закрытии эмитит событие 'modal:close-request' или просто 'modal:close'.
+
+#### Класс BasketView
+
+Шаблон: #basket
+
+Назначение: компонент, который рендерит список товаров корзины, общую цену и кнопку «Оформить». Может быть отрендерен как внутри ModalView, так и в другом месте.
+
+Конструктор: constructor(container: HTMLElement, events: EventEmitter)
+
+Поля:
+listEl: HTMLUListElement
+priceEl: HTMLElement
+orderButton: HTMLButtonElement
+Методы:
+render(items: IProduct[]): HTMLElement — рендерит список, использует CardBasketView для каждого item.
+setTotalPrice(total: number)
+setCount(count: number)
+
+#### Класс FormBaseView
+
+Назначение: вынести общую логику форм: получение элементов формы, управление состоянием кнопки submit, отображение ошибок, делегирование событий input
+
+Конструктор: constructor(container: HTMLElement, templateId: string, events: EventEmitter)
+
+Поля:
+formEl: HTMLFormElement
+submitBtn: HTMLButtonElement
+errorsEl: HTMLElement
+events: EventEmitter
+
+Методы:
+render(data?: Partial<IBuyer>): HTMLElement — клонирует шаблон формы и устанавливает базовые слушатели.
+protected bindInputs(): void — привязка событий input/change и отправки формы.
+protected setSubmitEnabled(enabled: boolean): void
+protected setErrors(errors: Partial<Record<keyof IBuyer, string>> | string): void — отображение сообщений об ошибках в errorsEl.
+
+#### Класс OrderFormView (extends FormBaseView)
+
+Шаблон: #order
+Поля:
+payment buttons (name="card"/"cash"), address input
+
+Поведение:
+Кнопки оплаты переключают локальный state payment и эмитят 'form:change'.
+Адрес input — эмитит 'form:change' на input.
+Кнопка submit (Далее) эмитит 'form:submit' с payload IBuyer когда форма валидна.
+Эвенты:
+'order:payment:change' => { payment: TPayment }
+Использует базовые события FormBaseView.
+
+#### Класс ContactsFormView (extends FormBaseView)
+
+Шаблон: #contacts
+
+Поля:
+email input, phone input
+
+Поведение:
+На input — эмитит 'form:change'
+На submit — 'form:submit' с payload IBuyer (email/phone)
+Эвенты:
+'contacts:submit', 'contacts:change'.
+
+#### Класс SuccessView
+
+Шаблон: #success
+Назначение: отображение успешного оформления заказа — простая вёрстка с кнопкой «За новыми покупками!».
+Конструктор: constructor(container: HTMLElement, events: EventEmitter)
+
+Методы:
+render(totalText?: string): HTMLElement
+
+### События классов в слое представления View
+
+#### Класс HeaderView
+События:
+
+1) modal:open
+
+Цель: попросить приложение открыть указанный модальный (в данном коде — открыть модальное окно корзины).
+
+2) cart:updated
+
+Когда приходит: компонент подписывается в конструкторе на this.events.on("cart:updated", …).
+Что делает компонент: пересчитывает количество элементов и суммарную цену и обновляет .header__cart-count и .header__cart-price.
+
+#### Класс GalleryView
+
+События:
+
+1) gallery:open-product (GalleryView.EVENTS.OPEN_PRODUCT)
+
+Когда генерируется: делегированный обработчик кликов по списку карточек. Срабатывает, если пользователь кликнул по карточке (article.card), но не по кнопке добавления в корзину (.card__button).
+Описание: сигнализирует, что нужно показать превью/детали продукта или перейти на страницу товара. productId берётся из data-id карточки (card.dataset.id).
+
+
+2) gallery:add-to-cart (GalleryView.EVENTS.ADD_TO_CART)
+
+События (общие, эмитятся через this.events):
+
+1) cart:add
+Описание: событие «добавить в корзину» — генерируется при клике на кнопку действия внутри карточки.
+Когда выпускается: при клике на элемент this.actionBtnEl (обработчик click). В обработчике вызывается evt.stopPropagation(), чтобы клик по кнопке не всплывал.
+
+2) product:selected
+
+События:
+
+1) "card:add"
+
+Описание: пользователь нажал кнопку «Добавить в корзину» на карточке товара.
+Когда эмитируется: при клике на элемент с классом .card__button внутри карточки.
+Данные (payload):
+
+2) "product:select"
+
+Описание: пользователь кликнул по карточке — запрос на выбор/просмотр деталей товара.
+Когда эмитируется: при клике на элемент карточки (closest(".card")).
+
+#### Класс CardPreviewView (extends CardBaseView)
+
+События:
+
+1) preview:add
+
+Когда эмитируется:
+При клике пользователя по кнопке "Добавить в корзину" в окне превью товара.
+Если в контейнере установлен data-product-id (через render), в payload передаётся этот id.
+Если id не установлен — событие всё равно эмитируется, но productId будет пустой строкой.
+
+2) preview:close
+
+Когда эмитируется:
+При клике пользователя по кнопке закрытия превью.
+Если в контейнере установлен data-product-id — в payload будет productId, иначе поле может отсутствовать или быть undefined.
+
+#### Класс CardBasketView (extends CardBaseView)
+
+События:
+
+1) "cart:remove"
+
+Генерируется компонентом: CardBasketView
+Когда генерируется: при клике на кнопку удаления товара в карточке (.card__remove).
+Назначение: запрос на удаление товара из корзины (модель, подписанные на это событие, должны выполнить удаление/обновление состояния).
+
+2) "product:open"
+
+Генерируется компонентом: CardBasketView
+Когда генерируется: при клике на изображение или заголовок карточки (img или .card__title).
+Назначение: запрос на открытие/показ страницы/модалки с подробной информацией о товаре.
+
+#### Класс ModalView
+
+События:
+
+1) modal:open
+Описание: сигнализирует, что модальное окно открылось.
+Когда генерируется: сразу после того, как выполнено открытие (например, после добавления класса modal_active).
+
+2) modal:close
+Описание: сигнализирует, что модальное окно закрылось.
+Когда генерируется: сразу после удаления класса modal_active.
+
+#### Класс BasketView
+
+События:
+
+1) Название: "basket:toggle"
+
+Описание: пользователь кликнул по кнопке открытия/переключения видимости корзины (элемент с классом .basket__toggle).
+Данные (payload): отсутствуют.
+Когда генерируется: обработчик click на this.toggleBtn -> emitter.emit("basket:toggle").
+
+2) Название: "basket:close"
+
+Описание: пользователь кликнул по кнопке закрытия корзины (элемент .basket__close), если такая кнопка есть в разметке.
+Данные: отсутствуют.
+Когда генерируется: обработчик click на this.closeBtn -> emitter.emit("basket:close").
+
+3) Название: "cart:clear"
+
+Описание: пользователь кликнул кнопку очистки корзины (элемент .basket__clear).
+Данные: отсутствуют.
+Когда генерируется: обработчик click на this.clearBtn -> emitter.emit("cart:clear").
+
+4) Название: "cart:remove"
+
+Описание: пользователь запросил удаление конкретной позиции в списке корзины — клик по кнопке удаления внутри .basket__list. Кнопки удаления в разметке имеют data-action="remove" и data-id="<productId>".
+Данные: объект с id товара:
+{ id: string }
+Когда генерируется: делегированный обработчик click на this.listEl ищет ближайший элемент с [data-action='remove'], берёт removeBtn.dataset.id и вызывает emitter.emit("cart:remove", { id }).
+
+#### Класс FormBaseView
+1) form: submit
+
+Когда: при сабмите формы (обработчик submit вызывает evt.preventDefault()).
+Описание: buyer содержит текущее состояние полей формы: payment, email, phone, address.
+
+2) form: payment:changed
+
+Когда генерируется: при клике на кнопку выбора способа оплаты (кнопки с data-payment). После клика у соответствующей кнопки добавляется класс "button_alt-active".
+Описание: payment — значение способа оплаты, взятое из data-payment (или атрибута data-payment через getAttribute).
+
+3) form:field:changed
+
+Когда генерируется: при вводе/изменении любого поля формы (input/textarea), для каждого события input.
+Описание:
+field — имя поля (из name или data-name атрибута).
+value — текущее значение поля.
+
+4) form:reset
+
+Когда генерируется: при сбросе формы (вызов FormBaseView.reset() или событие reset на форме). В reset форма сбрасывается, удаляется активный способ оплаты и генерируется событие.
+
+
+#### Класс OrderFormView (extends FormBaseView)
+
+События:
+
+1) "buyer:setPayment"
+
+Когда генерируется: при клике на кнопку выбора способа оплаты (элемент с data-payment="...").
+Назначение: обновить модель покупателя (BuyerModel) — установить выбранный способ оплаты.
+
+
+2) "buyer:setEmail"
+
+Когда генерируется: при вводе (input) в поле email.
+Назначение: сохранить/валидировать email в модели покупателя.
+
+3) "buyer:setPhone"
+
+Когда генерируется: при вводе (input) в поле телефона.
+Назначение: сохранить/валидировать телефон в модели покупателя.
+
+4) "buyer:setAddress"
+
+Когда генерируется: при вводе (input) в поле адреса (может быть textarea или input).
+Назначение: сохранить адрес в модели покупателя.
+
+5) "order:send"
+
+Когда генерируется: при попытке отправить заказ — submit формы (форма с preventDefault) или клик по кнопке отправки, если форма отсутствует.
+Назначение: собрать данные из моделей (BuyerModel, корзины) и выполнить отправку заказа (запрос на сервер).
+
+
+#### Класс ContactsFormView (extends FormBaseView)
+
+События:
+
+1) contacts:change
+
+Когда генерируется:
+при любом изменении полей формы:
+клик по кнопке выбора оплаты (data-payment) — при этом визуально помечается выбранная кнопка;
+ввод (input) в поле email;
+ввод (input) в поле phone;
+ввод (input) в textarea address.
+Реализуется вызовом приватного метода emitChange(), который собирает текущие значения полей и вызывает this.emitter.emit("contacts:change", { buyer }).
+
+2) contacts:submit
+
+Когда генерируется:
+при попытке отправки формы (submit):
+обработчик формы this.form слушает событие submit и вызывает onFormSubmit, который вызывает preventDefault() и затем эмитит событие;
+если есть отдельная кнопка отправки вне <form> (submitButton) и её тип не "submit", то клик по этой кнопке тоже вызывает onFormSubmit и генерирует событие.
+
+#### Класс SuccessView
+
+События:
+
+1) success:open  
+
+Когда генерируется: вызывается в методе open() после того, как модальному элементу добавлен класс активного состояния (modal_active).
+
+Назначение: уведомить приложение (контроллер) о том, что окно успешного оформления стало видимым. Можно использовать для логирования, фокусировки, трекинга или синхронизации состояния.
+
+2) success:close  
+
+Когда генерируется: вызывается в методе close() после того, как модальному элементу удалён класс активного состояния (modal_active). Методу close() предшествуют обработчики клика по кнопкам закрытия (handleClose) и клика по оверлею (handleOverlayClick).
+
+Назначение: уведомить приложение о том, что окно закрыто (пользователь нажал кнопку/крестик/кликнул вне содержимого или контроллер закрыл окно). Контроллер может на это реагировать (сбросить форму, обновить состояние корзины, перейти на другую страницу).
+
+
+### Презентер
+
+Код презентера написан в основном скрипте приложения в файле main.ts

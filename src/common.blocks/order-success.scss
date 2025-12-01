@@ -7,15 +7,31 @@
   align-items: center;
   text-align: center;
   gap: 1rem;
-
+  padding-top: 4rem;
+  padding-bottom: 4.7rem;
   &::before {
     content: " ";
-    @include mixins.background('../images/Subtract.png');
+    @include mixins.background("../images/Subtract.png");
     width: 256px;
     height: 256px;
   }
 
   &__close {
     margin-top: 2rem;
+  }
+
+  &__title {
+    font-weight: 500;
+    font-size: 60px;
+    text-align: center;
+    margin: 1rem 0 0 0;
+  }
+
+  &__description {
+    font-size: 28px;
+    line-height: 38px;
+    letter-spacing: 0%;
+    text-align: center;
+    margin: 0;
   }
 }

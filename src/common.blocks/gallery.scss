@@ -4,7 +4,7 @@
 .gallery {
   @include mixins.container;
   @include mixins.grid(600px, 24px);
-
+  padding: 4rem 0rem 8rem;
   &__item {
     border: none;
     border-radius: $defaultBorderRadius;

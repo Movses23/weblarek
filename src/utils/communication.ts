@@ -11,7 +11,7 @@ export class Communication {
 
   constructor(api: IApi) {
     this.api = api;
-  };
+  }
 
   async fetchProducts(): Promise<IProduct[]> {
     const resp = await this.api.get<IProductsResponse | { items: string[] }>(
@@ -27,12 +27,12 @@ export class Communication {
         .map((id) => apiProducts.items.find((p) => p.id === id))
         .filter((p): p is IProduct => Boolean(p));
       return items;
-    };
+    }
 
     return resp.items as IProduct[];
-  };
+  }
 
   async sendOrder(order: IOrderRequest): Promise<Record<string, unknown>> {
     return this.api.post<Record<string, unknown>>("/order/", order);
-  };
-};
+  }
+}

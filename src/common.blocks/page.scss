@@ -1,17 +1,18 @@
 @use "variables" as *;
 
-html, body.page {
-	height: 100%;
-	font-family: $font;
-	font-size: $baseFontSize;
-	color: $baseFontColor;
-	background: $background;
+html,
+body.page {
+  height: 100%;
+  font-family: $font;
+  font-size: $baseFontSize;
+  color: $baseFontColor;
+  background: $background;
 }
 
 .page__wrapper {
-	width: 100%;
+  width: 100%;
 
-	&_locked {
-		position: fixed;
-	}
+  &_locked {
+    position: fixed;
+  }
 }

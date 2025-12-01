@@ -1,14 +1,14 @@
 export function pascalToKebab(value: string): string {
   return value.replace(/([a-z0–9])([A-Z])/g, "$1-$2").toLowerCase();
-};
+}
 
 export function isSelector(x: any): x is string {
   return typeof x === "string" && x.length > 1;
-};
+}
 
 export function isEmpty(value: any): boolean {
   return value === null || value === undefined;
-};
+}
 
 export type SelectorCollection<T> = string | NodeListOf<Element> | T[];
 
@@ -25,7 +25,7 @@ export function ensureAllElements<T extends HTMLElement>(
   if (Array.isArray(selectorElement)) {
     return selectorElement;
   }
-  ;throw new Error(`Unknown selector element`);
+  throw new Error(`Unknown selector element`);
 }
 
 export type SelectorElement<T> = T | string;
@@ -48,7 +48,7 @@ export function ensureElement<T extends HTMLElement>(
     return selectorElement as T;
   }
   throw new Error("Unknown selector element");
-};
+}
 
 export function cloneTemplate<T extends HTMLElement>(
   query: string | HTMLTemplateElement
@@ -58,7 +58,7 @@ export function cloneTemplate<T extends HTMLElement>(
     throw new Error(`Template ${query} has no content`);
   }
   return template.content.firstElementChild.cloneNode(true) as T;
-};
+}
 
 export function bem(
   block: string,
@@ -72,7 +72,7 @@ export function bem(
     name,
     class: `.${name}`,
   };
-};
+}
 
 export function getObjectProperties(
   obj: object,
@@ -85,7 +85,7 @@ export function getObjectProperties(
       filter ? filter(name, prop) : name !== "constructor"
     )
     .map(([name]) => name);
-};
+}
 
 export function setElementData<T extends Record<string, unknown> | object>(
   el: HTMLElement,
@@ -94,7 +94,7 @@ export function setElementData<T extends Record<string, unknown> | object>(
   for (const key in data) {
     el.dataset[key] = String(data[key]);
   }
-};
+}
 
 export function getElementData<T extends Record<string, unknown>>(
   el: HTMLElement,
@@ -105,16 +105,16 @@ export function getElementData<T extends Record<string, unknown>>(
     data[key as keyof T] = scheme[key](el.dataset[key]);
   }
   return data as T;
-};
+}
 
 export function isPlainObject(obj: unknown): obj is object {
   const prototype = Object.getPrototypeOf(obj);
   return prototype === Object.getPrototypeOf({}) || prototype === null;
-};
+}
 
 export function isBoolean(v: unknown): v is boolean {
   return typeof v === "boolean";
-};
+}
 
 export function createElement<T extends HTMLElement>(
   tagName: keyof HTMLElementTagNameMap,
@@ -132,11 +132,11 @@ export function createElement<T extends HTMLElement>(
         element[key] = isBoolean(value) ? value : String(value);
       }
     }
-  };
+  }
   if (children) {
     for (const child of Array.isArray(children) ? children : [children]) {
       element.append(child);
     }
-  };
+  }
   return element;
-};
+}

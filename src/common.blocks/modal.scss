@@ -3,18 +3,18 @@
 
 .modal {
   @include mixins.sublayer;
-  // height: max-content;
   position: fixed;
   display: none;
-  justify-content: center;
   background-color: $overlayBackground;
   z-index: 100;
-  padding-top: 5vh;
-  padding-bottom: 5vh;
+  padding-top: 4.87vh;
   box-sizing: border-box;
 
   &_active {
     display: flex;
+    flex-direction: row;
+    align-content: start;
+    flex-wrap: wrap;
   }
 
   &__container {
@@ -22,10 +22,13 @@
     @include mixins.flex(column);
     gap: $defaultPadding;
     background-color: $background;
-    // min-height: 90vmin;
     border-radius: 3rem;
     box-sizing: border-box;
     position: relative;
+    padding: 2.4rem 0.5rem 2.4rem;
+  }
+  &:has(.card_full) {
+    padding-top: 6vh;
   }
 
   &__content {
@@ -41,14 +44,18 @@
   &__actions {
     @include mixins.flex(row);
     align-items: center;
-    gap: 2rem;
+    gap: 2.4rem;
+  }
+  &:has(.basket__item) .modal__actions {
+    padding-bottom: 2.4rem;
+    padding-top: 2rem;
   }
 
   &__close {
     position: absolute;
-    top: calc(#{$defaultPadding} / 2);
+    top: calc(#{2.6rem} / 2);
     right: calc(#{$defaultPadding} / 2);
-    @include mixins.icon(2rem, 'close');
+    @include mixins.icon(2.5rem, "close");
     @include mixins.link(white, $hover);
   }
 
@@ -59,7 +66,7 @@
   }
 
   &__message {
-    white-space:nowrap;
+    white-space: nowrap;
     max-width: 60%;
     text-overflow: ellipsis;
     overflow: hidden;

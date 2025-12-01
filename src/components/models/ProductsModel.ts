@@ -1,6 +1,7 @@
 import { EventEmitter } from "../base/Events";
-import { IBuyer, IProduct } from "../../types";
-
+import { IProduct, IProductsResponse } from "../../types";
+import { Api } from "../base/Api";
+import { API_URL } from "../../utils/constants";
 export class ProductsModel extends EventEmitter {
   private products: IProduct[];
   private selectedProduct: IProduct | null;
@@ -21,7 +22,8 @@ export class ProductsModel extends EventEmitter {
   }
 
   getProductById(id: string): IProduct | undefined {
-    return this.products.find((p) => p.id === id);
+    const found = this.products.find((p) => p.id === id);
+    return found ? { ...found } : undefined;
   }
 
   setSelectedProduct(productId: string | null): void {
@@ -31,8 +33,8 @@ export class ProductsModel extends EventEmitter {
       return;
     }
     const found = this.getProductById(productId) ?? null;
-    this.selectedProduct = found;
-    this.emit("product:selected", { product: found });
+    this.selectedProduct = found ? { ...found } : null;
+    this.emit("product:selected", { product: this.selectedProduct });
   }
 
   getSelectedProduct(): IProduct | null {
@@ -40,7 +42,20 @@ export class ProductsModel extends EventEmitter {
   }
 }
 
-export interface IOrderRequest {
-  buyer: IBuyer;
-  items: string[];
+const api = new Api(API_URL);
+let cache: IProduct[] | null = null;
+
+export async function getAllProducts(): Promise<IProduct[]> {
+  if (!cache) {
+    const res = await api.get<IProductsResponse>("/products");
+    cache = res.items;
+  }
+  return cache;
+}
+
+export async function getProductById(
+  id: string
+): Promise<IProduct | undefined> {
+  const items = await getAllProducts();
+  return items.find((p) => p.id === id);
 }

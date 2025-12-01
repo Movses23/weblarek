@@ -3,11 +3,11 @@
 @use "../../vendor/glyphter";
 
 @mixin icon($size, $name) {
-    display: inline-block;
-    width: $size;
-    height: $size;
-    font-size: $size;
-    padding: 0;
-    @extend .icon;
-    @extend .icon-#{$name};
+  display: inline-block;
+  width: 5.5rem;
+  height: 5.3rem;
+  font-size: $size;
+  padding: 0;
+  @extend .icon;
+  @extend .icon-#{$name};
 }

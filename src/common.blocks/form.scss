@@ -1,12 +1,14 @@
 @use "variables" as *;
 @use "mixins";
-@use 'sass:color';
+@use "sass:color";
 
 .form {
   @include mixins.flex(column);
-  gap: 1.5rem;
+  gap: 8.5rem;
   border-radius: 3rem;
-
+  padding-left: 35px;
+  padding-top: 45px;
+  padding-bottom: 50px;
   &__label {
     flex-grow: 1;
   }
@@ -16,12 +18,11 @@
     color: white;
     border: $defaultBorder;
     border-radius: 1.5rem;
-    padding: 1rem;
+    padding: 1rem 3rem;
     font-size: 1.4rem;
-    width: 100%;
+    width: 88%;
     box-sizing: border-box;
     outline-color: $secondary;
-
     &:focus {
       outline-style: solid;
     }
@@ -34,5 +35,9 @@
     &::placeholder {
       color: color.adjust($primaryLight, $lightness: 23%);
     }
+  }
+
+  &__errors {
+    font-size: 30px;
   }
 }
