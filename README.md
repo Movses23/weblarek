@@ -509,4 +509,4 @@ success:close — окно закрыто
 https://www.figma.com/design/92C0vV1ZCsVpgN9cH2DZ2d/Yandex--%D0%92%D0%B5%D0%B1-%D0%BB%D0%B0%D1%80%D1%91%D0%BA-?node-id=201-9445&p=f&t=rIpwKgU1xJf6sAmx-0
 
 ##### Ссылка на репозиторий:
-https://github.com/Movses23/weblarek
+https://github.com/Movses23/weblarek/tree/master
