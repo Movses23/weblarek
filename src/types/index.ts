@@ -33,6 +33,10 @@ export interface IProductsResponse {
 }
 
 export interface IOrderRequest {
-  buyer: IBuyer;
+  payment: TPayment;
+  email: string;
+  phone: string;
+  address: string;
   items: string[];
+  total: number;
 }

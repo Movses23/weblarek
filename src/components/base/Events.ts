@@ -26,8 +26,9 @@ export interface AppEvents {
 
   "basket:toggle": undefined;
   "basket:close": undefined;
+  "basket:checkout": undefined;
 
-  "modal:open": { id?: string } | undefined;
+  "modal:open": { id?: string; product?: IProduct } | undefined;
   "modal:close": undefined;
 
   "order:submit": {
@@ -52,11 +53,14 @@ export interface AppEvents {
 
   "contacts:change": { buyer: IBuyer };
   "contacts:submit": { buyer: IBuyer };
+
+  "header:cartClick": undefined;
+  "cart:sync": { items: IProduct[] };
 }
 
 export type EmitterEvent = {
   eventName: string;
-  data: AppEvents[keyof AppEvents] | undefined;
+  payload?: AppEvents[keyof AppEvents] | undefined;
 };
 
 export type SubscriberForPayload<TPayload> = (data: TPayload) => void;
@@ -140,7 +144,7 @@ export class EventEmitter implements IEvents {
         subscribers.forEach((callback) =>
           (callback as SubscriberForPayload<EmitterEvent>)({
             eventName: String(eventName),
-            data: data as AppEvents[keyof AppEvents] | undefined,
+            payload: data as AppEvents[keyof AppEvents] | undefined,
           })
         );
       }

@@ -1,5 +1,5 @@
 import { Component } from "../base/Component";
-import { EventEmitter, AppEvents } from "../base/Events";
+import { EventEmitter } from "../base/Events";
 
 type RenderData = {
   logoSrc?: string;
@@ -11,37 +11,22 @@ export class HeaderView extends Component<RenderData> {
   private logoImg: HTMLImageElement | null = null;
   private cartButton: HTMLElement | null = null;
   private cartCount: HTMLElement | null = null;
+  private uiEvents: EventEmitter;
 
-  private readonly events: EventEmitter;
-  private cartClickHandler?: () => void;
-
-  constructor(
-    container: HTMLElement,
-    events: EventEmitter,
-    cartClickHandler?: () => void
-  ) {
+  constructor(container: HTMLElement, uiEvents: EventEmitter) {
     super(container);
-    this.events = events;
-    this.cartClickHandler = cartClickHandler;
+    this.uiEvents = uiEvents;
 
-    this.logoImg = this.container.querySelector(
-      ".header__logo"
-    ) as HTMLImageElement | null;
-    this.cartButton = this.container.querySelector(
-      ".header__cart"
-    ) as HTMLElement | null;
-    this.cartCount = this.container.querySelector(
-      ".header__cart-count"
-    ) as HTMLElement | null;
+    this.logoImg = this.container.querySelector(".header__logo-image");
+    this.cartButton = this.container.querySelector(".header__basket");
+    this.cartCount = this.container.querySelector(".header__basket-counter");
 
     if (this.cartButton) {
       this.cartButton.addEventListener("click", this.handleCartClick);
     }
-
-    this.events.on("cart:updated", (payload) => this.onCartUpdated(payload));
   }
 
-  render(data?: Partial<RenderData>): HTMLElement {
+  render(data?: Partial<RenderData>) {
     super.render(data);
 
     if (data?.logoSrc && this.logoImg) {
@@ -57,20 +42,6 @@ export class HeaderView extends Component<RenderData> {
 
   private handleCartClick = (e: Event) => {
     e.preventDefault();
-    if (typeof this.cartClickHandler === "function") {
-      this.cartClickHandler();
-      return;
-    }
-    this.events.emit("modal:open", { id: "cart" });
+    this.uiEvents.emit("header:cartClick");
   };
-
-  private onCartUpdated(payload: AppEvents["cart:updated"]) {
-    const data = payload || { items: [] };
-    const items = Array.isArray(data.items) ? data.items : [];
-    const count = items.length;
-
-    if (this.cartCount) {
-      this.cartCount.textContent = String(count);
-    }
-  }
 }

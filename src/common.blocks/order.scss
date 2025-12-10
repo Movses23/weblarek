@@ -15,8 +15,4 @@
     @include mixins.flex(row);
     gap: 1.5rem;
   }
-
-  &__button {
-    min-width: 9.5rem;
-  }
 }

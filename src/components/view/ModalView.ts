@@ -77,7 +77,6 @@ export class ModalView extends Component<{}> {
       }
       this.appendContent(opts.content);
 
-      // ✅ Добавляем data-template-id для SCSS
       const templateId = opts.content.id || "";
       this.modalElement.dataset.templateId = templateId;
 
@@ -104,7 +103,6 @@ export class ModalView extends Component<{}> {
   close(): void {
     this.modalElement.classList.remove("modal_active");
 
-    // ✅ Сбрасываем data-template-id
     this.modalElement.removeAttribute("data-template-id");
 
     document.removeEventListener("keydown", this.onDocumentKeydownBound);
