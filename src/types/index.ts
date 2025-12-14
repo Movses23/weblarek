@@ -40,3 +40,8 @@ export interface IOrderRequest {
   items: string[];
   total: number;
 }
+
+export interface ICardPreviewData {
+  product: IProduct;
+  inCart: boolean;
+}

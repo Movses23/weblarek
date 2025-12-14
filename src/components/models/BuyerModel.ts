@@ -111,7 +111,7 @@ export class BuyerModel extends EventEmitter {
       const digits = (this.phone || "").replace(/\D/g, "");
       if (!this.phone) {
         errors.phone = "Введите телефон";
-      } else if (digits.length < 10) {
+      } else if (digits.length < 11) {
         errors.phone = "Некорректный номер телефона";
       }
     }

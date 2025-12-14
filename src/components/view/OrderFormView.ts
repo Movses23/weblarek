@@ -19,16 +19,17 @@ export class OrderFormView extends Component<IBuyer> {
     super(container);
     this.events = events;
 
-    this.form = container.querySelector<HTMLFormElement>("form");
+    this.form = container.querySelector<HTMLFormElement>("form") ?? null;
     this.payButtons = container.querySelectorAll<HTMLElement>(
       "[data-payment], .order__buttons button"
     );
 
-    this.addressInput = container.querySelector<
-      HTMLInputElement | HTMLTextAreaElement
-    >('[name="address"]');
+    this.addressInput =
+      container.querySelector<HTMLInputElement | HTMLTextAreaElement>(
+        '[name="address"]'
+      ) ?? null;
     this.submitButton =
-      container.querySelector<HTMLButtonElement>('[type="submit"]');
+      container.querySelector<HTMLButtonElement>('[type="submit"]') ?? null;
 
     this.initListeners();
   }
@@ -40,9 +41,10 @@ export class OrderFormView extends Component<IBuyer> {
         const payment = (btn.getAttribute("data-payment") ||
           btn.getAttribute("name") ||
           "") as TPayment;
+
         this.setActivePayment(payment);
-        if (payment) this.events.emit("buyer:setPayment", { payment });
-        this.updateSubmitState();
+
+        this.events.emit("form:payment:changed", { payment });
       };
       btn.addEventListener("click", handler);
       this.listeners.push(() => btn.removeEventListener("click", handler));
@@ -50,10 +52,9 @@ export class OrderFormView extends Component<IBuyer> {
 
     if (this.addressInput) {
       const handler = (ev: Event) => {
-        this.events.emit("buyer:setAddress", {
-          address: (ev.target as HTMLInputElement | HTMLTextAreaElement).value,
-        });
-        this.updateSubmitState();
+        const value = (ev.target as HTMLInputElement | HTMLTextAreaElement)
+          .value;
+        this.events.emit("form:field:changed", { field: "address", value });
       };
       this.addressInput.addEventListener("input", handler);
       this.listeners.push(() =>
@@ -63,14 +64,9 @@ export class OrderFormView extends Component<IBuyer> {
 
     const onSubmit = (ev?: Event) => {
       ev?.preventDefault();
-      if (this.addressInput)
-        this.events.emit("buyer:setAddress", {
-          address: this.addressInput.value.trim(),
-        });
-      this.events.emit("buyer:validate");
+
       this.events.emit("order:send");
       if (this.submitHandler) this.submitHandler(ev);
-      this.updateSubmitState();
     };
 
     if (this.form) {
@@ -94,28 +90,29 @@ export class OrderFormView extends Component<IBuyer> {
     });
   }
 
-  private updateSubmitState() {
-    const addressVal = this.addressInput?.value.trim() ?? "";
-    const hasPayment =
-      this.container.querySelector<HTMLElement>(`.${this.activeModifier}`) !==
-      null;
-
+  setErrors(errors?: Partial<Record<keyof IBuyer, string>> | null) {
     const generalErrorsEl =
       this.container.querySelector<HTMLElement>(".form__errors");
-    const errors: string[] = [];
-    if (!hasPayment) errors.push("Выберите способ оплаты");
-    if (!addressVal) errors.push("Необходимо указать адрес");
+    if (generalErrorsEl) {
+      if (!errors || Object.keys(errors).length === 0) {
+        generalErrorsEl.textContent = "";
+      } else {
+        const msgs: string[] = [];
+        if (errors.payment) msgs.push(errors.payment);
+        if (errors.address) msgs.push(errors.address);
 
-    if (generalErrorsEl) generalErrorsEl.textContent = errors.join(". ");
-    if (this.submitButton)
-      this.submitButton.disabled = !(hasPayment && addressVal);
+        generalErrorsEl.textContent = msgs.join(". ");
+      }
+    }
+    if (this.submitButton) {
+      this.submitButton.disabled = !!(errors && Object.keys(errors).length > 0);
+    }
   }
 
   render(data?: Partial<IBuyer>): HTMLElement {
     if (data?.payment) this.setActivePayment(data.payment);
-    if (this.addressInput && data?.address)
+    if (this.addressInput && data?.address != null)
       this.addressInput.value = data.address;
-    this.updateSubmitState();
     return this.container;
   }
 

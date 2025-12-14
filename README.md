@@ -259,251 +259,249 @@ sendOrder(order: IOrderRequest): Promise<Record<string, unknown>>
 делает POST на /order/ и передаёт тело заказа (buyer + items: string[]).
 возвращает ответ сервера (тип можно заменить на конкретный интерфейс ответа).
 
-### Слой представления View
+#### Слой представления (View)
 
-Схема классов:
+Слой View отвечает исключительно за отображение данных и генерацию пользовательских событий.
+Компоненты представления:
 
-HeaderView — шапка сайта (логотип, кнопка корзины со счётчиком)
+не хранят состояние данных;
 
-GalleryView — контейнер галереи товаров, рендерит список карточек
+не содержат бизнес-логики и валидации;
 
-CardBaseView — общий родитель для карточек
+получают данные через метод render;
 
-CardCatalogView — карточка товара в каталоге (#card-catalog)
+уведомляют Презентер о действиях пользователя через EventEmitter.
 
-CardPreviewView — полная карточка товара (#card-preview)
+Все изменения данных выполняются только через Модели, а решения о том, как реагировать на события, принимаются в Презентере (main.ts).
 
-CardBasketView — компактная карточка корзины (#card-basket)
+Общие принципы реализации View
 
-ModalView — модальное окно (не наследуется)
+каждый View-класс отвечает за один логический блок интерфейса;
 
-BasketView — содержимое корзины (#basket), рендерится в ModalView
+DOM-элементы ищутся и сохраняются в конструкторе;
 
-FormBaseView — базовый функционал форм
+все обработчики событий навешиваются один раз;
 
-OrderFormView — форма выбора способа оплаты и адреса (#order)
+метод render():
 
-ContactsFormView — форма ввода email/phone (#contacts)
+принимает данные;
 
-SuccessView — отображение успешного оформления заказа (#success)
+записывает их в DOM;
 
-#### HeaderView
+возвращает корневой HTMLElement;
 
-Назначение: отображение шапки, логотипа, кнопки корзины и счётчика.
+View не создают другие View внутри себя — экземпляры создаются в Презентере;
 
-Конструктор: constructor(container: HTMLElement, events: EventEmitter)
+View не валидируют данные, а только отображают ошибки, полученные от Модели.
 
-Поля:
-
-btnBasket: HTMLButtonElement — кнопка открытия корзины
-
-counterEl: HTMLElement — элемент счётчика
-
-events: EventEmitter
-
-Методы:
-
-render(): HTMLElement — связывает элементы DOM с полями и отображает шапку
-
-setCount(count: number): void — обновление значения счётчика
-
-События:
-
-modal:open — запрос на открытие модального окна корзины
-
-cart:updated — обновление счётчика при изменении корзины
-
+Список компонентов представления
 #### GalleryView
 
-Назначение: рендер галереи товаров и делегирование событий карточек.
+Назначение:
+Отображает каталог товаров.
+
+Особенности реализации:
+
+принимает массив готовых HTMLElement, подготовленных в Презентере;
+
+не создает карточки самостоятельно.
 
 Методы:
 
-render(products: IProduct[]): HTMLElement — рендерит список карточек (CardCatalogView)
-
-appendCard(card: CardCatalogView): void — добавление карточки в контейнер
-
-События:
-
-gallery:open-product — клик по карточке (не по кнопке добавления в корзину)
-
-gallery:add-to-cart → cart:add — клик по кнопке добавления товара в корзину
-
-product:selected → card:select — выбор товара для просмотра деталей
-
-#### CardBaseView
-
-Назначение: общий функционал для всех карточек: работа с шаблоном, установка изображения, заголовка, цены, категории и базовая логика событий.
-
-Методы:
-
-render(data: Partial<IProduct> & { product?: IProduct }): HTMLElement — клонирует шаблон и заполняет данные
-
-protected setImage(imgEl: HTMLImageElement, src: string, alt?: string): void
-
-protected bindCommonHandlers(): void — обработчики клика и действий
-
-getRoot(): HTMLElement
+render(items: HTMLElement[]): HTMLElement
 
 #### CardCatalogView
 
+Назначение:
+Отображает карточку товара в каталоге.
+
 Шаблон: #card-catalog
 
-События:
+Ответственность:
 
-card:open — клик по карточке открывает превью
+отображение изображения, названия, категории и цены;
+
+генерация событий при клике по карточке и кнопке покупки.
 
 Методы:
 
-render(product: IProduct): HTMLElement — отображение category, title, image, price
+render(product: IProduct): HTMLElement
+
+
+События:
+
+product:select — открытие превью товара
+
+cart:add — добавление товара в корзину
 
 #### CardPreviewView
 
+Назначение:
+Отображает подробную информацию о товаре в модальном окне.
+
 Шаблон: #card-preview
 
+Ответственность:
+
+полное описание товара;
+
+кнопка «Купить / Удалить из корзины»;
+
+дизейбл кнопки при отсутствии цены.
+
+Методы:
+
+render(data: { product: IProduct; inCart: boolean }): HTMLElement
+
+
 События:
 
-preview:add — клик по кнопке «Добавить в корзину»
+cart:add
 
-preview:close — клик по кнопке закрытия превью
+cart:remove
 
-Методы:
-
-render(product: IProduct): HTMLElement — отображение полного описания товара
-
-#### CardBasketView
-
-Шаблон: #card-basket
-
-События:
-
-cart:remove — клик по кнопке удаления
-
-product:open — клик по изображению или заголовку
-
-Методы:
-
-render(product: IProduct, index?: number): HTMLElement — рендер карточки корзины
-
-#### ModalView
-
-Назначение: универсальный компонент для модальных окон.
-
-Поля:
-
-container: HTMLElement — root модального контейнера
-
-contentContainer: HTMLElement — элемент для вставки содержимого
-
-closeBtn: HTMLButtonElement
-
-events: EventEmitter
-
-Методы:
-
-open(): void — открытие модального окна, эмит modal:open
-
-close(): void — закрытие модального окна, очистка контента, эмит modal:close
-
-setContent(node: HTMLElement | Component): void — вставка содержимого
-
-clearContent(): void
+modal:close
 
 #### BasketView
 
+Назначение:
+Отображение содержимого корзины в модальном окне.
+
 Шаблон: #basket
 
-Назначение: отображение списка товаров в корзине, общей суммы и кнопки оформления заказа.
+Особенности реализации:
+
+получает массив HTMLElement карточек корзины;
+
+управляет только отображением списка, суммы и кнопки оформления.
 
 Методы:
 
-render(items: IProduct[]): HTMLElement — рендер списка с использованием CardBasketView
+render(items: HTMLElement[], total: number): HTMLElement
 
-setTotalPrice(total: number) — обновление общей цены
-
-setCount(count: number) — обновление количества товаров
 
 События:
 
-basket:toggle — переключение видимости корзины
+order:open — переход к оформлению заказа
 
-basket:close — закрытие корзины
+#### CardBasketView
 
-cart:clear — очистка корзины
+Назначение:
+Компактное отображение товара в корзине.
 
-cart:remove — удаление позиции по id
+Шаблон: #card-basket
 
-#### FormBaseView
+Ответственность:
 
-Назначение: базовая логика форм: получение элементов, управление кнопкой submit, отображение ошибок, делегирование событий input.
+отображение индекса, названия и цены товара;
+
+кнопка удаления товара из корзины.
 
 Методы:
 
-render(data?: Partial<IBuyer>): HTMLElement — клонирование шаблона, установка слушателей
+render(product: IProduct, index?: number): HTMLElement
 
-protected bindInputs(): void — обработка input/change и submit
-
-protected setSubmitEnabled(enabled: boolean): void
-
-protected setErrors(errors: Partial<Record<keyof IBuyer, string>> | string): void
 
 События:
 
-form:submit — отправка формы
+cart:remove
 
-form:field:changed — изменение поля
+#### ModalView
 
-form:reset — сброс формы
+Назначение:
+Универсальный компонент модального окна.
+
+Особенности:
+
+не наследуется;
+
+отображает любой компонент представления;
+
+управляет фокусом и закрытием.
+
+Методы:
+
+open(options?: { content?: HTMLElement }): void
+close(): void
+
+
+Закрытие модального окна:
+
+клик по фону;
+
+клик по кнопке закрытия;
+
+клавиша Escape.
 
 #### OrderFormView
 
+Назначение:
+Первая форма оформления заказа (способ оплаты + адрес).
+
 Шаблон: #order
+
+Особенности реализации:
+
+не валидирует данные;
+
+только эмитит события;
+
+визуально подсвечивает выбранный способ оплаты.
+
+Методы:
+
+render(data?: Partial<IBuyer>): HTMLElement
+setErrors(errors?: Partial<Record<keyof IBuyer, string>>): void
+
 
 События:
 
-buyer:setPayment — выбор способа оплаты
+form:payment:changed
 
-buyer:setEmail — ввод email
+form:field:changed
 
-buyer:setPhone — ввод телефона
-
-buyer:setAddress — ввод адреса
-
-order:send — попытка отправки заказа
+order:send
 
 #### ContactsFormView
 
+Назначение:
+Вторая форма оформления заказа (email и телефон).
+
 Шаблон: #contacts
+
+Особенности реализации:
+
+не хранит данные покупателя;
+
+не валидирует данные;
+
+отображает ошибки, полученные от Модели;
+
+использует маску телефона.
+
+Методы:
+
+setErrors(errors?: Partial<Record<keyof IBuyer, string>>): void
+
 
 События:
 
-contacts:change — любое изменение полей (email, phone)
+contacts:change
 
-contacts:submit — отправка формы
+contacts:submit
 
-### SuccessView
+#### SuccessView
+
+Назначение:
+Отображение успешного оформления заказа.
 
 Шаблон: #success
 
-События:
+Ответственность:
 
-success:open — окно успешного оформления открыто
+отображение итоговой суммы заказа;
 
-success:close — окно закрыто
-
-#### Презентер
-
-Презентер находится в main.ts
-
-Назначение: связывает все слои (Model, View, Communication), подписывается на события, обрабатывает логику приложения:
-
-открытие/закрытие модалок
-
-управление корзиной
-
-сбор данных форм
-
-отправка заказов на сервер
+кнопка возврата к покупкам.
 
 ##### Ссылка на макет:
 https://www.figma.com/design/92C0vV1ZCsVpgN9cH2DZ2d/Yandex--%D0%92%D0%B5%D0%B1-%D0%BB%D0%B0%D1%80%D1%91%D0%BA-?node-id=201-9445&p=f&t=rIpwKgU1xJf6sAmx-0

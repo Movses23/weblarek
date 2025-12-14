@@ -1,91 +1,53 @@
-import { IProduct } from "../../types";
+import { Component } from "../base/Component";
 import { EventEmitter } from "../base/Events";
 
-export class BasketView {
-  private container: HTMLElement;
-  private uiEvents: EventEmitter;
-  private listEl: HTMLElement | null;
-  private priceEl: HTMLElement | null;
-  private orderBtn: HTMLButtonElement | null;
+export class BasketView extends Component<HTMLElement[]> {
+  private listEl: HTMLElement;
+  private totalEl: HTMLElement;
+  private orderBtn: HTMLButtonElement;
+  private events: EventEmitter;
 
-  constructor(container: HTMLElement, uiEvents: EventEmitter) {
-    this.container = container;
-    this.uiEvents = uiEvents;
+  constructor(container: HTMLElement, events: EventEmitter) {
+    super(container);
+    this.events = events;
 
-    const root = this.container.querySelector(".basket") as HTMLElement | null;
-    this.listEl = root?.querySelector(".basket__list") ?? null;
-    this.priceEl = root?.querySelector(".basket__price") ?? null;
-    this.orderBtn =
-      root?.querySelector<HTMLButtonElement>(".basket__button") ?? null;
+    this.listEl = container.querySelector(".basket__list") as HTMLElement;
+    this.totalEl = container.querySelector(".basket__price") as HTMLElement;
+    this.orderBtn = container.querySelector(
+      ".basket__button"
+    ) as HTMLButtonElement;
+
+    this.orderBtn.addEventListener("click", () => {
+      if (!this.orderBtn.disabled) {
+        this.events.emit("order:open");
+      }
+    });
   }
-
   private formatNumberWithSpaces(value: string | number): string {
     const raw = String(value).replace(/\D/g, "");
     return raw.replace(/(?<=\d{2})(?=(\d{3})+(?!\d))/g, " ");
   }
 
-  render(items: IProduct[]) {
-    if (!this.listEl) return;
+  render(items: HTMLElement[], total: number = 0): HTMLElement {
     this.listEl.innerHTML = "";
 
     if (!items.length) {
-      const tmplEmpty = document.createElement("p");
-      tmplEmpty.className = "basket__empty";
-      tmplEmpty.textContent = "Корзина пуста";
-      this.listEl.appendChild(tmplEmpty);
+      const empty = document.createElement("p");
+      empty.className = "basket__empty";
+      empty.textContent = "Корзина пуста";
+      this.listEl.appendChild(empty);
 
-      if (this.orderBtn) {
-        this.orderBtn.disabled = true;
-        this.orderBtn.textContent = "Оформить";
-      }
-      if (this.priceEl) this.priceEl.textContent = "0 синапсов";
-      return;
+      this.orderBtn.disabled = true;
+      this.totalEl.textContent = "0 синапсов";
+
+      return this.container;
     }
 
-    items.forEach((item, idx) => {
-      const template = document.getElementById(
-        "card-basket"
-      ) as HTMLTemplateElement | null;
-      if (!template?.content.firstElementChild) return;
-      const node = template.content.firstElementChild.cloneNode(
-        true
-      ) as HTMLElement;
+    items.forEach((el) => this.listEl.appendChild(el));
 
-      const indexEl = node.querySelector<HTMLElement>(".basket__item-index");
-      const titleEl = node.querySelector<HTMLElement>(".card__title");
-      const deleteBtn = node.querySelector<HTMLButtonElement>(
-        ".basket__item-delete"
-      );
+    this.orderBtn.disabled = false;
+    this.totalEl.textContent = `${this.formatNumberWithSpaces(total)} синапсов`;
 
-      if (indexEl) indexEl.textContent = String(idx + 1);
-      if (titleEl) titleEl.textContent = item.title ?? "";
-
-      if (deleteBtn) {
-        deleteBtn.onclick = (e) => {
-          e.preventDefault();
-          this.uiEvents.emit("cart:remove", { id: item.id });
-        };
-      }
-
-      if (this.listEl) {
-        this.listEl.appendChild(node);
-      }
-    });
-
-    const total = items.reduce((s, it) => s + (it.price ?? 0), 0);
-    if (this.priceEl)
-      this.priceEl.textContent = `${this.formatNumberWithSpaces(
-        total
-      )} синапсов`;
-
-    if (this.orderBtn) {
-      this.orderBtn.disabled = false;
-      this.orderBtn.textContent = "Оформить";
-      this.orderBtn.onclick = (e) => {
-        e.preventDefault();
-        if (!items.length) return;
-        this.uiEvents.emit("order:open");
-      };
-    }
+    return this.container;
   }
 }
