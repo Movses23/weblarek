@@ -142,11 +142,18 @@ uiEvents.on("order:open", () => {
 
 uiEvents.on("form:payment:changed", ({ payment }) => {
   buyerModel.setPayment(payment as TPayment);
+
+
+  activeOrderForm?.render(buyerModel.getBuyer());
+  activeOrderForm?.setErrors(buyerModel.validate("order"));
 });
+
 
 uiEvents.on("form:field:changed", ({ field, value }) => {
   if (field === "address") {
     buyerModel.setAddress(value);
+
+    activeOrderForm?.render(buyerModel.getBuyer());
     activeOrderForm?.setErrors(buyerModel.validate("order"));
   }
 });
