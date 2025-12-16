@@ -1,9 +1,13 @@
 import { Component } from "../base/Component";
-import { IEvents, AppEvents } from "../base/Events";
+import { EventEmitter } from "../base/Events";
 import { CDN_URL, categoryMap } from "../../utils/constants";
 import { IProduct } from "../../types";
 
-export class CardCatalogView extends Component<IProduct> {
+type CardCatalogRenderData = IProduct & {
+  inCart?: boolean;
+};
+
+export class CardCatalogView extends Component<CardCatalogRenderData> {
   private readonly root: HTMLElement;
   private readonly title: HTMLElement | null;
   private readonly img: HTMLImageElement | null;
@@ -11,14 +15,12 @@ export class CardCatalogView extends Component<IProduct> {
   private readonly categoryEl: HTMLElement | null;
   private readonly actionBtn: HTMLElement | null;
 
-  private productId: string = "";
-  private emitter?: IEvents;
-  private cartItems = new Set<string>();
+  private productId = "";
 
-  constructor(container: HTMLElement, emitter?: IEvents) {
+  constructor(container: HTMLElement, private readonly events: EventEmitter) {
     super(container);
     this.root = container;
-    this.emitter = emitter;
+
     this.title = this.root.querySelector(".card__title");
     this.img = this.root.querySelector<HTMLImageElement>(".card__image");
     this.price = this.root.querySelector(".card__price");
@@ -27,66 +29,27 @@ export class CardCatalogView extends Component<IProduct> {
 
     this.root.addEventListener("click", (evt) => {
       const target = evt.target as Element;
-      const btn = target.closest(".card__button");
-      if (btn) {
+
+      if (target.closest(".card__button")) {
         if (!this.productId) return;
-        const inCart = (btn as HTMLElement).dataset.inCart === "true";
-        if (this.emitter) {
-          if (inCart)
-            this.emitter.emit("cart:remove", {
-              id: this.productId,
-            } as AppEvents["cart:remove"]);
-          else
-            this.emitter.emit("cart:add", {
-              productId: this.productId,
-            } as AppEvents["cart:add"]);
-        }
+        this.events.emit("card:action", { productId: this.productId });
         return;
       }
+
       if (!this.productId) return;
-      this.emitter?.emit("product:select", { productId: this.productId });
+      this.events.emit("product:select", { productId: this.productId });
     });
-
-    if (this.emitter) {
-      this.emitter.on("cart:updated", (payload: { items: IProduct[] }) => {
-        this.cartItems.clear();
-        payload.items.forEach((p) => p.id && this.cartItems.add(String(p.id)));
-        this.updateButton();
-      });
-
-      this.emitter.on("cart:item:added", (payload: { product: IProduct }) => {
-        if (payload.product?.id) this.cartItems.add(String(payload.product.id));
-        this.updateButton();
-      });
-
-      this.emitter.on("cart:item:removed", (payload: { product: IProduct }) => {
-        if (payload.product?.id)
-          this.cartItems.delete(String(payload.product.id));
-        this.updateButton();
-      });
-    }
   }
 
-  private formatNumberWithSpaces(value: string | number): string {
-    const raw = String(value).replace(/\D/g, "");
-    return raw.replace(/(?<=\d{2})(?=(\d{3})+(?!\d))/g, " ");
+  private formatPrice(value: number): string {
+    return String(value)
+      .replace(/\D/g, "")
+      .replace(/(?<=\d{2})(?=(\d{3})+(?!\d))/g, " ");
   }
 
-  private updateButton() {
-    if (!this.actionBtn) return;
-
-    const inCart = !!(this.productId && this.cartItems.has(this.productId));
-    if (inCart) {
-      this.actionBtn.dataset.inCart = "true";
-      this.actionBtn.textContent = "Удалить из корзины";
-    } else {
-      delete this.actionBtn.dataset.inCart;
-      this.actionBtn.textContent = "Купить";
-    }
-  }
-
-  render(data?: Partial<IProduct>): HTMLElement {
+  render(data?: Partial<CardCatalogRenderData>): HTMLElement {
     if (!data) return this.root;
+
     this.productId = data.id ?? "";
 
     if (this.title) this.title.textContent = data.title ?? "";
@@ -98,28 +61,39 @@ export class CardCatalogView extends Component<IProduct> {
       if (data.category) {
         const mod = categoryMap[data.category as keyof typeof categoryMap];
         if (mod) this.categoryEl.classList.add(mod);
-        this.categoryEl.textContent = data.category ?? "";
+        this.categoryEl.textContent = data.category;
       }
     }
 
-    if (this.img) {
-      const src =
-        typeof data.image === "string" && !/^https?:\/\//i.test(data.image)
-          ? `${CDN_URL}${data.image}`
-          : (data.image as string) ?? "";
-      if (src) (this.img.src = src), (this.img.alt = data.title ?? "");
+    if (this.img && data.image) {
+      const src = /^https?:\/\//i.test(data.image)
+        ? data.image
+        : `${CDN_URL}${data.image}`;
+      this.img.src = src;
+      this.img.alt = data.title ?? "";
     }
 
     if (this.price) {
-      if (data.price == null || data.price === 0)
+      if (data.price == null || data.price === 0) {
         this.price.textContent = "Бесценно";
-      else
-        this.price.textContent = `${this.formatNumberWithSpaces(
-          data.price
-        )} синапсов`;
+      } else {
+        this.price.textContent = `${this.formatPrice(data.price)} синапсов`;
+      }
     }
 
-    this.updateButton();
+    if (this.actionBtn) {
+      if (data.price == null) {
+        this.actionBtn.textContent = "Недоступно";
+        this.actionBtn.setAttribute("disabled", "true");
+      } else if (data.inCart) {
+        this.actionBtn.textContent = "Удалить из корзины";
+        this.actionBtn.removeAttribute("disabled");
+      } else {
+        this.actionBtn.textContent = "Купить";
+        this.actionBtn.removeAttribute("disabled");
+      }
+    }
+
     return this.root;
   }
 }

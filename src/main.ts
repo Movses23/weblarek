@@ -52,7 +52,10 @@ headerBasketBtn.addEventListener("click", (e) => {
 function buildCatalogElements(products: IProduct[]): HTMLElement[] {
   return products.map((product) => {
     const el = cloneTemplate<HTMLElement>("#card-catalog");
-    return new CardCatalogView(el, uiEvents).render(product);
+    return new CardCatalogView(el, uiEvents).render({
+      ...product,
+      inCart: cartModel.hasItem(product.id),
+    });
   });
 }
 
@@ -123,6 +126,8 @@ cartModel.on("cart:updated", ({ items }) => {
     );
   }
 });
+
+galleryView.render(buildCatalogElements(productsModel.getProducts()));
 
 uiEvents.on("order:open", () => {
   const el = cloneTemplate<HTMLElement>("#order");
